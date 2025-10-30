@@ -16,9 +16,19 @@ export const userService = {
         })
     },
 
-    async create(data: UserInput) {
+    async createUser(data: UserInput) {
+        const { role, ...rest } = data;
+
         await prisma.user.create({
-            data,
-        })
+            data: {
+                ...rest,
+                role,
+                ...(role === "SELLER" || role === "ADMIN" ? {
+                    Wallet: {
+                        create: {},
+                    },
+                } : {}),
+            },
+        });
     }
 }
