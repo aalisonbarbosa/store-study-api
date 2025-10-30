@@ -11,7 +11,7 @@ model Cart {
   id        String     @id @default(cuid())
   userId    String     @unique
   createdAt DateTime   @default(now())
-  updatedAt DateTime
+  updatedAt DateTime?  @updatedAt
   User      User       @relation(fields: [userId], references: [id])
   CartItem  CartItem[]
 }
@@ -29,7 +29,7 @@ model Category {
   id        String    @id @default(cuid())
   name      String    @unique
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime? @updatedAt
   Product   Product[]
 }
 
@@ -39,7 +39,7 @@ model Order {
   total     Float
   status    OrderStatus @default(PENDING)
   createdAt DateTime    @default(now())
-  updatedAt DateTime
+  updatedAt DateTime?   @updatedAt
   User      User        @relation(fields: [userId], references: [id])
   OrderItem OrderItem[]
   Payment   Payment?
@@ -61,7 +61,7 @@ model Payment {
   status    PaymentStatus @default(INITIATED)
   amount    Float
   createdAt DateTime      @default(now())
-  updatedAt DateTime
+  updatedAt DateTime?     @updatedAt
   Order     Order         @relation(fields: [orderId], references: [id])
 }
 
@@ -76,7 +76,7 @@ model Product {
   status      ProductStatus @default(PENDING)
   reason      String?
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime      @updatedAt
   CartItem    CartItem[]
   OrderItem   OrderItem[]
   Category    Category      @relation(fields: [categoryId], references: [id])
@@ -100,7 +100,7 @@ model User {
   password  String
   role      Role
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime? @updatedAt
   Cart      Cart?
   Order     Order[]
   Product   Product[]
@@ -112,7 +112,7 @@ model Wallet {
   userId      String        @unique
   balance     Float         @default(0.0)
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime?     @updatedAt
   Transaction Transaction[]
   User        User          @relation(fields: [userId], references: [id])
 }
