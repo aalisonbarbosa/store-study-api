@@ -13,10 +13,44 @@ const createProductSchema = z.object({
   categoryId: z.string().min(1, "CategoryId obrigatório"),
 });
 
+
+
+export async function getApprovedProducts(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const products = await productService.getAllApproved();
+
+    return reply.status(200).send(products);
+  } catch (err) {
+    console.error("Erro ao buscar produtos:", err);
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+
+
+interface UserParams {
+  id: string;
+}
+
+export async function getUserProducts(req: FastifyRequest<{ Params: UserParams }>, reply: FastifyReply) {
+  const { id } = req.params;
+
+  try {
+    const products = await productService.getByUser(id);
+
+    return reply.status(200).send(products);
+  } catch (err) {
+    console.error("Erro ao buscar produtos:", err);
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+
+
 const allowedMime = ["image/jpeg", "image/png", "image/webp"];
 const maxFileSizeBytes = 5 * 1024 * 1024;
 
-export async function create(req: FastifyRequest, reply: FastifyReply) {
+export async function createProduct(req: FastifyRequest, reply: FastifyReply) {
   const user = req.user;
   if (!["SELLER", "ADMIN"].includes(user.role)) {
     return reply.status(403).send({ message: "Não autorizado." });
@@ -36,7 +70,7 @@ export async function create(req: FastifyRequest, reply: FastifyReply) {
   for await (const part of parts) {
     if (uploadError) {
       if (part.type === "file") {
-        await part.file.resume();
+        part.file.resume();
       }
       continue;
     }
@@ -47,12 +81,12 @@ export async function create(req: FastifyRequest, reply: FastifyReply) {
       const { filename, mimetype, file } = part;
       if (!filename) {
         uploadError = "Arquivo sem nome.";
-        await file.resume();
+        file.resume();
         continue;
       }
       if (!allowedMime.includes(mimetype)) {
         uploadError = `Tipo de arquivo não permitido: ${mimetype}`;
-        await file.resume();
+        file.resume();
         continue;
       }
 
@@ -108,9 +142,114 @@ export async function create(req: FastifyRequest, reply: FastifyReply) {
       ownerId: user.id,
       categoryId,
     });
+
     return reply.status(201).send({ message: "Produto criado com sucesso" });
   } catch (err) {
     console.error("Erro ao registrar produto:", err);
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+
+
+export async function approveProduct(req: FastifyRequest<{ Params: { productId: string } }>, reply: FastifyReply) {
+  const { productId } = req.params;
+
+  if (!productId) {
+    return reply.status(400).send({ message: "O campo productId é obrigatório" });
+  }
+
+  const user = req.user;
+
+  if (user.role !== "ADMIN") {
+    return reply.status(403).send({ message: "Não autorizado." });
+  }
+
+  try {
+    await productService.approve(productId);
+
+    return reply.status(201).send({ message: "Produto aprovado com sucesso" });
+  } catch (err) {
+    console.error("Erro ao aprovar produto:", err)
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+export async function rejectProduct(req: FastifyRequest<{ Params: { productId: string }, Body: { reason: string } }>, reply: FastifyReply) {
+  const { productId } = req.params;
+  const { reason } = req.body;
+
+  if (!productId || !reason) {
+    return reply.status(400).send({ message: "Os campos productId e reason são obrigatórios" });
+  }
+
+  const user = req.user;
+
+  if (user.role !== "ADMIN") {
+    return reply.status(403).send({ message: "Não autorizado." });
+  }
+
+  try {
+    await productService.reject(productId, reason);
+
+    return reply.status(201).send({ message: "Produto rejeitado com sucesso" });
+  } catch (err) {
+    console.error("Erro ao rejeitar produto:", err)
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+
+
+const updateProductSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  price: z.number()
+});
+
+export async function updateProduct(req: FastifyRequest, reply: FastifyReply) {
+  const parseResult = updateProductSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    const errors = parseResult.error.issues.map(i => i.message);
+    return reply.status(400).send({ message: "Dados inválidos", errors });
+  }
+
+  const { id, title, description, price } = parseResult.data;
+
+  const userId = req.user.id;
+
+  try {
+    await productService.update({ id, title, description, price, ownerId: userId });
+
+    return reply.status(204).send({ message: "Produto atualizado com sucesso" });
+  } catch (err) {
+    console.error("Erro ao atualizar produto:", err);
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+
+
+const removeProductSchema = z.object({
+  id: z.string(),
+});
+
+export async function deleteProduct(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const parseResult = removeProductSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => i.message);
+      return reply.status(400).send({ message: "Dados inválidos", errors });
+    }
+
+    const userId = req.user.id;
+
+    await productService.delete(parseResult.data.id, userId);
+
+    return reply.status(204).send({ message: "Produto removido com sucesso" });
+  } catch (err) {
+    console.error("Erro ao remover produto:", err);
     return reply.status(500).send({ message: "Erro interno no servidor" });
   }
 }
