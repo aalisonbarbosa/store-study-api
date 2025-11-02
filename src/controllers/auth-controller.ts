@@ -1,19 +1,7 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
-import z from "zod";
 import bcrypt from "bcrypt";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import { loginSchema, registerSchema } from "../schemas/auth-schema.js";
 import { userService } from "../services/user-service.js";
-
-const registerSchema = z.object({
-    name: z.string().min(1, "Nome é obrigatório"),
-    email: z.string().email("Email inválido"),
-    password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-    role: z.enum(["ADMIN", "SELLER", "CUSTOMER"])
-})
-
-const loginSchema = z.object({
-    email: z.string().email("Email inválido"),
-    password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres")
-});
 
 export const authController = {
     async register(req: FastifyRequest, reply: FastifyReply) {

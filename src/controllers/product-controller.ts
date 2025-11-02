@@ -1,19 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { createProductSchema, removeProductSchema, updateProductSchema } from "../schemas/produt-schema.js";
 import { uploadToCloudinary } from "../lib/upload.js";
-import z from "zod";
 import { productService } from "../services/product-service.js";
-
-const createProductSchema = z.object({
-  title: z.string().min(1, "Nome obrigatório"),
-  description: z.string().optional().default(""),
-  price: z
-    .union([z.string(), z.number()])
-    .transform(val => typeof val === "string" ? parseFloat(val) : val)
-    .refine(val => val > 0, "Preço inválido"),
-  categoryId: z.string().min(1, "CategoryId obrigatório"),
-});
-
-
 
 export async function getApprovedProducts(req: FastifyRequest, reply: FastifyReply) {
   try {
@@ -175,7 +163,15 @@ export async function approveProduct(req: FastifyRequest<{ Params: { productId: 
   }
 }
 
-export async function rejectProduct(req: FastifyRequest<{ Params: { productId: string }, Body: { reason: string } }>, reply: FastifyReply) {
+
+
+export async function rejectProduct(
+  req: FastifyRequest<{
+    Params: { productId: string },
+    Body: { reason: string }
+  }>,
+  reply: FastifyReply
+) {
   const { productId } = req.params;
   const { reason } = req.body;
 
@@ -201,13 +197,6 @@ export async function rejectProduct(req: FastifyRequest<{ Params: { productId: s
 
 
 
-const updateProductSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  price: z.number()
-});
-
 export async function updateProduct(req: FastifyRequest, reply: FastifyReply) {
   const parseResult = updateProductSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -230,10 +219,6 @@ export async function updateProduct(req: FastifyRequest, reply: FastifyReply) {
 }
 
 
-
-const removeProductSchema = z.object({
-  id: z.string(),
-});
 
 export async function deleteProduct(req: FastifyRequest, reply: FastifyReply) {
   try {
