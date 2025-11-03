@@ -43,3 +43,69 @@ export async function addProductToCart(
         return reply.status(500).send({ message: "Erro interno ao adicionar produto ao carrinho." });
     }
 }
+
+export async function decrementProductInCart(
+    req: FastifyRequest<{ Params: { productId: string } }>,
+    reply: FastifyReply
+) {
+    if (req.user.role !== "CUSTOMER") {
+        return reply.status(403).send({ message: "Acesso negado: apenas clientes podem modificar o carrinho." });
+    }
+
+    const { productId } = req.params;
+    if (!productId) {
+        return reply.status(400).send({ message: "ID do produto não informado." });
+    }
+
+    try {
+        const cart = await CartService.getByUser(req.user.id);
+        if (!cart) {
+            return reply.status(404).send({ message: "Carrinho não encontrado para o usuário atual." });
+        }
+
+        const cartItem = await CartService.getCartItem(cart.id, productId);
+        if (!cartItem) {
+            return reply.status(404).send({ message: "Produto não encontrado no carrinho." });
+        }
+
+        await CartService.decrementProduct(cart.id, productId);
+
+        return reply.status(200).send({ message: "Quantidade do produto no carrinho decrementada com sucesso." });
+    } catch (err) {
+        console.error("Erro ao decrementar produto no carrinho:", err);
+        return reply.status(500).send({ message: "Erro interno ao atualizar o carrinho." });
+    }
+}
+
+export async function removeProductFromCart(
+    req: FastifyRequest<{ Params: { productId: string } }>,
+    reply: FastifyReply
+) {
+    if (req.user.role !== "CUSTOMER") {
+        return reply.status(403).send({ message: "Acesso negado: apenas clientes podem modificar o carrinho." });
+    }
+
+    const { productId } = req.params;
+    if (!productId) {
+        return reply.status(400).send({ message: "ID do produto não informado." });
+    }
+
+    try {
+        const cart = await CartService.getByUser(req.user.id);
+        if (!cart) {
+            return reply.status(404).send({ message: "Carrinho não encontrado para o usuário atual." });
+        }
+
+        const cartItem = await CartService.getCartItem(cart.id, productId);
+        if (!cartItem) {
+            return reply.status(404).send({ message: "Produto não encontrado no carrinho." });
+        }
+
+        await CartService.deleteCartItem(cartItem.id);
+
+        return reply.status(200).send({ message: "Produto removido do carrinho com sucesso." });
+    } catch (err) {
+        console.error("Erro ao remover produto do carrinho:", err);
+        return reply.status(500).send({ message: "Erro interno ao atualizar o carrinho." });
+    }
+}
