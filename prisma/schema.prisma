@@ -23,6 +23,8 @@ model CartItem {
   quantity  Int     @default(1)
   Cart      Cart    @relation(fields: [cartId], references: [id])
   Product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId])
 }
 
 model Category {
@@ -66,10 +68,11 @@ model Payment {
 }
 
 model Product {
-  id        String          @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   description String?
   price       Float
+  stock       Int
   imageUrl    String?
   ownerId     String
   categoryId  String
@@ -84,7 +87,7 @@ model Product {
 }
 
 model Transaction {
-  id        String            @id @default(cuid())
+  id          String          @id @default(cuid())
   walletId    String
   type        TransactionType
   amount      Float
@@ -108,7 +111,7 @@ model User {
 }
 
 model Wallet {
-  id        String          @id @default(cuid())
+  id          String        @id @default(cuid())
   userId      String        @unique
   balance     Float         @default(0.0)
   createdAt   DateTime      @default(now())

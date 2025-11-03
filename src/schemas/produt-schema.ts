@@ -8,6 +8,9 @@ export const createProductSchema = z.object({
     .transform(val => typeof val === "string" ? parseFloat(val) : val)
     .refine(val => val > 0, "Preço inválido"),
   categoryId: z.string().min(1, "CategoryId obrigatório"),
+  stock: z.union([z.string(), z.number()])
+    .transform(val => typeof val === "string" ? parseFloat(val) : val)
+    .refine(val => val > 0, "Estoque deve ser no minimo 1"),
 });
 
 export const updateProductSchema = z.object({

@@ -16,7 +16,7 @@ export const userService = {
         })
     },
 
-    async createUser(data: UserInput) {
+    async create(data: UserInput) {
         const { role, ...rest } = data;
 
         await prisma.user.create({
@@ -27,7 +27,11 @@ export const userService = {
                     Wallet: {
                         create: {},
                     },
-                } : {}),
+                } : {
+                    Cart: {
+                        create: {},
+                    }
+                }),
             },
         })
     },

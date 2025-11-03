@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify";
-import { uploadToCloudinary } from "../lib/upload.js";
+import { cloudinary } from "../lib/cloudinary.js";
 
 const allowedMime = ["image/jpeg", "image/png", "image/webp"];
 const maxFileSizeBytes = 5 * 1024 * 1024;
@@ -64,4 +64,14 @@ export const uploadService = {
       throw { status: 500, message: "Erro no upload do arquivo." };
     }
   },
-};
+}
+
+export async function uploadToCloudinary(buffer: Buffer, folder: string) {
+  return new Promise<{ secure_url: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder },
+      (err, result) => err ? reject(err) : resolve(result as { secure_url: string })
+    );
+    stream.end(buffer);
+  });
+}

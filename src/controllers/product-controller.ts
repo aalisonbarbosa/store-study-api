@@ -14,11 +14,7 @@ export async function getApprovedProducts(req: FastifyRequest, reply: FastifyRep
   }
 }
 
-interface UserParams {
-  id: string;
-}
-
-export async function getUserProducts(req: FastifyRequest<{ Params: UserParams }>, reply: FastifyReply) {
+export async function getUserProducts(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
   const { id } = req.params;
 
   try {

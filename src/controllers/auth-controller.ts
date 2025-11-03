@@ -24,7 +24,7 @@ export const authController = {
 
             const hashPassword = await bcrypt.hash(password, 10);
 
-            await userService.createUser({ name, email, password: hashPassword, role });
+            await userService.create({ name, email, password: hashPassword, role });
 
             reply.status(201).send({ message: "Usuário criado com sucesso" })
         } catch (err) {

@@ -4,6 +4,7 @@ interface ProductInput {
     title: string;
     description: string;
     price: number;
+    stock: number;
     imageUrl: string;
     ownerId: string;
     categoryId: string;
@@ -32,6 +33,14 @@ export const productService = {
                 ownerId,
             }
         });
+    },
+
+    async getById(id: string) {
+        return await prisma.product.findFirst({
+            where: {
+                id
+            }
+        })
     },
 
     async create(data: ProductInput) {
