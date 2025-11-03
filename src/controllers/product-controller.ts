@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { createProductSchema, removeProductSchema, updateProductSchema } from "../schemas/produt-schema.js";
-import { uploadToCloudinary } from "../lib/upload.js";
 import { productService } from "../services/product-service.js";
+import { uploadService } from "../services/upload-service.js";
 
 export async function getApprovedProducts(req: FastifyRequest, reply: FastifyReply) {
   try {
@@ -13,8 +13,6 @@ export async function getApprovedProducts(req: FastifyRequest, reply: FastifyRep
     return reply.status(500).send({ message: "Erro interno no servidor" });
   }
 }
-
-
 
 interface UserParams {
   id: string;
@@ -35,110 +33,35 @@ export async function getUserProducts(req: FastifyRequest<{ Params: UserParams }
 
 
 
-const allowedMime = ["image/jpeg", "image/png", "image/webp"];
-const maxFileSizeBytes = 5 * 1024 * 1024;
-
 export async function createProduct(req: FastifyRequest, reply: FastifyReply) {
-  const user = req.user;
-  if (!["SELLER", "ADMIN"].includes(user.role)) {
-    return reply.status(403).send({ message: "Não autorizado." });
-  }
-
-  if (!req.isMultipart()) {
-    return reply.status(400).send({ message: "Formato multipart/form-data esperado." });
-  }
-
-  const parts = req.parts();
-
-  const fields: Record<string, string> = {};
-  let uploadError: string | null = null;
-
-  let secureUrl: string | null = null;
-
-  for await (const part of parts) {
-    if (uploadError) {
-      if (part.type === "file") {
-        part.file.resume();
-      }
-      continue;
-    }
-
-    if (part.type === "field") {
-      fields[part.fieldname] = String(part.value);
-    } else if (part.type === "file") {
-      const { filename, mimetype, file } = part;
-      if (!filename) {
-        uploadError = "Arquivo sem nome.";
-        file.resume();
-        continue;
-      }
-      if (!allowedMime.includes(mimetype)) {
-        uploadError = `Tipo de arquivo não permitido: ${mimetype}`;
-        file.resume();
-        continue;
-      }
-
-      try {
-        const bufferChunks: Buffer[] = [];
-        let totalSize = 0;
-        for await (const chunk of file) {
-          const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-          totalSize += buf.length;
-          if (totalSize > maxFileSizeBytes) {
-            uploadError = "Arquivo muito grande.";
-            break;
-          }
-          bufferChunks.push(buf);
-        }
-        if (uploadError) {
-          continue;
-        }
-        const fileBuffer = Buffer.concat(bufferChunks);
-
-        const result = await uploadToCloudinary(fileBuffer, "products");
-        secureUrl = result.secure_url;
-      } catch (err) {
-        uploadError = "Erro no upload do arquivo.";
-        console.error("upload file error:", err);
-        continue;
-      }
-    }
-  }
-
-  if (uploadError) {
-    return reply.status(400).send({ message: "Erro no arquivo", error: uploadError });
-  }
-
-  const parseResult = createProductSchema.safeParse(fields);
-  if (!parseResult.success) {
-    const errors = parseResult.error.issues.map(i => i.message);
-    return reply.status(400).send({ message: "Dados inválidos", errors });
-  }
-
-  const { title, description, price, categoryId } = parseResult.data;
-
-  if (!secureUrl) {
-    return reply.status(400).send({ message: "Arquivo obrigatório." });
-  }
-
   try {
+    if (!["SELLER", "ADMIN"].includes(req.user.role)) {
+      return reply.status(403).send({ message: "Não autorizado." });
+    }
+
+    const { fields, fileBuffer, mimetype } = await uploadService.parseMultipartRequest(req);
+    uploadService.validateFile(mimetype, fileBuffer);
+
+    const secureUrl = await uploadService.uploadImage(fileBuffer);
+    const parseResult = createProductSchema.safeParse(fields);
+
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => i.message);
+      return reply.status(400).send({ message: "Dados inválidos", errors });
+    }
+
     await productService.create({
-      title,
-      description,
-      price,
+      ...parseResult.data,
       imageUrl: secureUrl,
-      ownerId: user.id,
-      categoryId,
+      ownerId: req.user.id,
     });
 
     return reply.status(201).send({ message: "Produto criado com sucesso" });
   } catch (err) {
-    console.error("Erro ao registrar produto:", err);
+    console.error("Erro ao criar produto:", err)
     return reply.status(500).send({ message: "Erro interno no servidor" });
   }
 }
-
-
 
 export async function approveProduct(req: FastifyRequest<{ Params: { productId: string } }>, reply: FastifyReply) {
   const { productId } = req.params;
@@ -162,8 +85,6 @@ export async function approveProduct(req: FastifyRequest<{ Params: { productId: 
     return reply.status(500).send({ message: "Erro interno no servidor" });
   }
 }
-
-
 
 export async function rejectProduct(
   req: FastifyRequest<{
@@ -204,12 +125,10 @@ export async function updateProduct(req: FastifyRequest, reply: FastifyReply) {
     return reply.status(400).send({ message: "Dados inválidos", errors });
   }
 
-  const { id, title, description, price } = parseResult.data;
-
   const userId = req.user.id;
 
   try {
-    await productService.update({ id, title, description, price, ownerId: userId });
+    await productService.update({ ...parseResult.data, ownerId: userId });
 
     return reply.status(204).send({ message: "Produto atualizado com sucesso" });
   } catch (err) {
