@@ -1,10 +1,13 @@
 import { prisma } from "../lib/prisma.js"
 
-export const CartService = {
+export const cartService = {
     async getByUser(userId: string) {
         return await prisma.cart.findUnique({
             where: {
                 userId
+            },
+            include: {
+                CartItem: { include: { Product: true } },
             }
         })
     },
@@ -33,12 +36,12 @@ export const CartService = {
                 },
             });
 
-            await tx.product.update({
-                where: { id: productId },
-                data: {
-                    stock: { decrement: quantity },
-                },
-            });
+            // await tx.product.update({
+            //     where: { id: productId },
+            //     data: {
+            //         stock: { decrement: quantity },
+            //     },
+            // });
         })
     },
 
@@ -61,13 +64,13 @@ export const CartService = {
                 });
             }
 
-            await tx.product.update(
-                {
-                    where: { id: productId },
-                    data: {
-                        stock: { increment: 1 }
-                    }
-                });
+            // await tx.product.update(
+            //     {
+            //         where: { id: productId },
+            //         data: {
+            //             stock: { increment: 1 }
+            //         }
+            //     });
         })
     },
 

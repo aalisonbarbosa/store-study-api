@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { productService } from "../services/product-service.js";
-import { CartService } from "../services/cart-service.js";
+import { cartService } from "../services/cart-service.js";
 
 export async function addProductToCart(
     req: FastifyRequest<{ Body: { productId: string } }>,
@@ -22,20 +22,14 @@ export async function addProductToCart(
         return reply.status(404).send({ message: "Produto não encontrado." });
     }
 
-    const quantity = 1;
-
-    if (product.stock < quantity) {
-        return reply.status(400).send({ message: "Estoque insuficiente para adicionar ao carrinho." });
-    }
-
     try {
-        const cart = await CartService.getByUser(req.user.id);
+        const cart = await cartService.getByUser(req.user.id);
 
         if (!cart) {
             return reply.status(404).send({ message: "Carrinho não encontrado para o usuário atual." });
         }
 
-        await CartService.addProduct(cart.id, productId, quantity);
+        await cartService.addProduct(cart.id, productId);
 
         return reply.status(201).send({ message: "Produto adicionado ao carrinho com sucesso." });
     } catch (err) {
@@ -58,17 +52,17 @@ export async function decrementProductInCart(
     }
 
     try {
-        const cart = await CartService.getByUser(req.user.id);
+        const cart = await cartService.getByUser(req.user.id);
         if (!cart) {
             return reply.status(404).send({ message: "Carrinho não encontrado para o usuário atual." });
         }
 
-        const cartItem = await CartService.getCartItem(cart.id, productId);
+        const cartItem = await cartService.getCartItem(cart.id, productId);
         if (!cartItem) {
             return reply.status(404).send({ message: "Produto não encontrado no carrinho." });
         }
 
-        await CartService.decrementProduct(cart.id, productId);
+        await cartService.decrementProduct(cart.id, productId);
 
         return reply.status(200).send({ message: "Quantidade do produto no carrinho decrementada com sucesso." });
     } catch (err) {
@@ -91,17 +85,17 @@ export async function removeProductFromCart(
     }
 
     try {
-        const cart = await CartService.getByUser(req.user.id);
+        const cart = await cartService.getByUser(req.user.id);
         if (!cart) {
             return reply.status(404).send({ message: "Carrinho não encontrado para o usuário atual." });
         }
 
-        const cartItem = await CartService.getCartItem(cart.id, productId);
+        const cartItem = await cartService.getCartItem(cart.id, productId);
         if (!cartItem) {
             return reply.status(404).send({ message: "Produto não encontrado no carrinho." });
         }
 
-        await CartService.deleteCartItem(cartItem.id);
+        await cartService.deleteCartItem(cartItem.id);
 
         return reply.status(200).send({ message: "Produto removido do carrinho com sucesso." });
     } catch (err) {
