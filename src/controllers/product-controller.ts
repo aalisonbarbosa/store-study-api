@@ -1,11 +1,22 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { createProductSchema, removeProductSchema, updateProductSchema } from "../schemas/produt-schema.js";
+import { createProductSchema, updateProductSchema } from "../schemas/produt-schema.js";
 import { productService } from "../services/product-service.js";
 import { uploadService } from "../services/upload-service.js";
 
 export async function getApprovedProducts(req: FastifyRequest, reply: FastifyReply) {
   try {
     const products = await productService.getAllApproved();
+
+    return reply.status(200).send(products);
+  } catch (err) {
+    console.error("Erro ao buscar produtos:", err);
+    return reply.status(500).send({ message: "Erro interno no servidor" });
+  }
+}
+
+export async function getPendingProducts(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    const products = await productService.getAllPending();
 
     return reply.status(200).send(products);
   } catch (err) {
@@ -105,7 +116,7 @@ export async function rejectProduct(
   try {
     await productService.reject(productId, reason);
 
-    return reply.status(201).send({ message: "Produto rejeitado com sucesso" });
+    return reply.status(200).send({ message: "Produto rejeitado com sucesso" });
   } catch (err) {
     console.error("Erro ao rejeitar produto:", err)
     return reply.status(500).send({ message: "Erro interno no servidor" });
@@ -135,17 +146,16 @@ export async function updateProduct(req: FastifyRequest, reply: FastifyReply) {
 
 
 
-export async function deleteProduct(req: FastifyRequest, reply: FastifyReply) {
+export async function deleteProduct(req: FastifyRequest<{ Body: { productId: string } }>, reply: FastifyReply) {
   try {
-    const parseResult = removeProductSchema.safeParse(req.body);
-    if (!parseResult.success) {
-      const errors = parseResult.error.issues.map(i => i.message);
-      return reply.status(400).send({ message: "Dados inválidos", errors });
+    const { productId } = req.body;
+    if (!productId) {
+      return reply.status(400).send({ message: "ID do produto obrigatório" })
     }
 
     const userId = req.user.id;
 
-    await productService.delete(parseResult.data.id, userId);
+    await productService.delete(productId, userId);
 
     return reply.status(204).send({ message: "Produto removido com sucesso" });
   } catch (err) {

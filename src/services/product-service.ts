@@ -1,97 +1,138 @@
 import { prisma } from "../lib/prisma.js";
 
 interface ProductInput {
-    title: string;
-    description: string;
-    price: number;
-    stock: number;
-    imageUrl: string;
-    ownerId: string;
-    categoryId: string;
+  title: string;
+  description: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  ownerId: string;
+  categoryId: string;
+  status?: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 interface ProductUpdate {
-    id: string;
-    title: string;
-    description: string;
-    price: number;
-    ownerId: string;
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  ownerId: string;
 }
 
 export const productService = {
-    async getAllApproved() {
-        return await prisma.product.findMany({
-            where: {
-                status: "APPROVED",
-            }
-        });
-    },
+  async getAllApproved() {
+    return await prisma.product.findMany({
+      where: {
+        status: "APPROVED",
+      },
+      include: {
+        Category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  },
 
-    async getByUser(ownerId: string) {
-        return await prisma.product.findMany({
-            where: {
-                ownerId,
-            }
-        });
-    },
+  async getAllPending() {
+    return await prisma.product.findMany({
+      where: {
+        status: "PENDING",
+      },
+    });
+  },
 
-    async getById(id: string) {
-        return await prisma.product.findFirst({
-            where: {
-                id
-            }
-        })
-    },
+  async getByUser(ownerId: string) {
+    return await prisma.product.findMany({
+      where: {
+        ownerId,
+      },
+      include: {
+        User: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        Category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  },
 
-    async create(data: ProductInput) {
-        await prisma.product.create({
-            data: data
-        });
-    },
+  async getById(id: string) {
+    return await prisma.product.findFirst({
+      where: {
+        id,
+      },
+    });
+  },
 
-    async update(data: ProductUpdate) {
-        const { id, ownerId, ...rest } = data;
+  async create(data: ProductInput) {
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: data.ownerId } });
 
-        await prisma.product.update({
-            where: {
-                id,
-                ownerId,
-            },
-            data: {
-                ...rest,
-            }
-        });
-    },
+      if (!user) return new Error("Usuario não encontrado");
 
-    async approve(id: string) {
-        await prisma.product.update({
-            where: {
-                id,
-            },
-            data: {
-                status: "APPROVED",
-            }
-        })
-    },
+      if (user.role === "ADMIN") {
+        data = { ...data, status: "APPROVED" };
+      }
 
-    async reject(id: string, reason: string) {
-        await prisma.product.update({
-            where: {
-                id,
-            },
-            data: {
-                status: "REJECTED",
-                reason,
-            }
-        })
-    },
+      await tx.product.create({
+        data: data,
+      });
+    });
+  },
 
-    async delete(id: string, ownerId: string) {
-        await prisma.product.delete({
-            where: {
-                id,
-                ownerId,
-            }
-        })
-    }
-}
+  async update(data: ProductUpdate) {
+    const { id, ownerId, ...rest } = data;
+
+    await prisma.product.update({
+      where: {
+        id,
+        ownerId,
+      },
+      data: {
+        ...rest,
+      },
+    });
+  },
+
+  async approve(id: string) {
+    await prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        status: "APPROVED",
+      },
+    });
+  },
+
+  async reject(id: string, reason: string) {
+    await prisma.product.update({
+      where: {
+        id,
+      },
+      data: {
+        status: "REJECTED",
+        reason,
+      },
+    });
+  },
+
+  async delete(id: string, ownerId: string) {
+    await prisma.product.delete({
+      where: {
+        id,
+        ownerId,
+      },
+    });
+  },
+};

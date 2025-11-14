@@ -35,13 +35,6 @@ export const cartService = {
                     quantity,
                 },
             });
-
-            // await tx.product.update({
-            //     where: { id: productId },
-            //     data: {
-            //         stock: { decrement: quantity },
-            //     },
-            // });
         })
     },
 
@@ -63,14 +56,6 @@ export const cartService = {
                     }
                 });
             }
-
-            // await tx.product.update(
-            //     {
-            //         where: { id: productId },
-            //         data: {
-            //             stock: { increment: 1 }
-            //         }
-            //     });
         })
     },
 
