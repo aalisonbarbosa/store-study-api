@@ -4,5 +4,4 @@ import { authController } from "../controllers/auth-controller.js";
 export default async function authRoutes(fastify: FastifyInstance) {
     fastify.post("/register", authController.register);
     fastify.post("/login", authController.login);
-    fastify.post("/logout", authController.logout);
 }
