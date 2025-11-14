@@ -97,17 +97,18 @@ model Transaction {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  password  String
-  role      Role
-  createdAt DateTime  @default(now())
-  updatedAt DateTime? @updatedAt
-  Cart      Cart?
-  Order     Order[]
-  Product   Product[]
-  Wallet    Wallet?
+  id         String    @id @default(cuid())
+  name       String
+  email      String    @unique
+  avatarUrl String?
+  password   String
+  role       Role
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime? @updatedAt
+  Cart       Cart?
+  Order      Order[]
+  Product    Product[]
+  Wallet     Wallet?
 }
 
 model Wallet {
